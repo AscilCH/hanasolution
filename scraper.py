@@ -78,9 +78,58 @@ def extract_phones(text: str) -> list[str]:
     for pat in PHONE_PATTERNS:
         for m in pat.finditer(text):
             a, b, c = m.groups()
-            if a[0] in '23456789':
-                phones.add(f"{a} {b} {c}")
+            full = a + b + c  # 8 raw digits
+            if a[0] not in '23456789':
+                continue
+            # Filter out dates: YYYYMMDD or DDMMYYYY patterns
+            if _looks_like_date(full):
+                continue
+            # Filter out sequential / repeated digit patterns
+            if _is_junk_number(full):
+                continue
+            # For bare 8-digit patterns (no +216 prefix), check nearby context
+            matched_text = m.group(0)
+            if not any(x in matched_text for x in ['+216', '00216', '(216)']):
+                start = max(0, m.start() - 80)
+                end = min(len(text), m.end() + 40)
+                context = text[start:end].lower()
+                # If near a date word, skip
+                date_words = ['janvier','février','mars','avril','mai','juin','juillet',
+                    'août','septembre','octobre','novembre','décembre',
+                    'january','february','march','april','may','june','july',
+                    'august','september','november','december',
+                    '/01/','/ 01/','/ 02/','/ 03/','/ 04/','/ 05/',
+                    '/06/','/07/','/08/','/09/','/10/','/11/','/12/',
+                    'date','publi']
+                if any(dw in context for dw in date_words):
+                    continue
+            phones.add(f"{a} {b} {c}")
     return sorted(phones)
+
+
+def _looks_like_date(digits):
+    """Check if 8 digits look like YYYYMMDD or DDMMYYYY."""
+    if len(digits) != 8:
+        return False
+    # YYYYMMDD
+    y, m, d = int(digits[:4]), int(digits[4:6]), int(digits[6:8])
+    if 1900 <= y <= 2099 and 1 <= m <= 12 and 1 <= d <= 31:
+        return True
+    # DDMMYYYY
+    d2, m2, y2 = int(digits[:2]), int(digits[2:4]), int(digits[4:8])
+    if 1900 <= y2 <= 2099 and 1 <= m2 <= 12 and 1 <= d2 <= 31:
+        return True
+    return False
+
+
+def _is_junk_number(digits):
+    """Filter out obviously fake numbers like 12345678, 11111111, etc."""
+    if len(set(digits)) <= 2:
+        return True
+    # Sequential
+    if digits in ('12345678','23456789','87654321','98765432'):
+        return True
+    return False
 
 
 def clean_html(html: str) -> str:
