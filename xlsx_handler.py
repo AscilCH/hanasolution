@@ -67,10 +67,10 @@ def read_xlsx(filepath):
                 v_node = cell.find('main:v', NS)
                 val = ""
                 if v_node is not None:
-                    val = v_node.text
+                    val = v_node.text or ""
                     t_attr = cell.get('t')
                     if t_attr == 's':
-                        val = shared_strings[int(val)] if val.isdigit() and int(val) < len(shared_strings) else val
+                        val = shared_strings[int(val)] if val and val.isdigit() and int(val) < len(shared_strings) else val
                     elif t_attr == 'inlineStr':
                         is_node = cell.find('.//main:t', NS)
                         if is_node is not None:
