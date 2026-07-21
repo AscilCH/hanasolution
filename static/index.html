@@ -155,8 +155,12 @@ td[dir="auto"]{max-width:260px;overflow:hidden;text-overflow:ellipsis}
 .badge-pending{background:rgba(255,255,255,.05);color:var(--dim)}
 .badge-existing{background:rgba(59,130,246,.12);color:var(--blue)}
 .badge-processing{background:rgba(245,158,11,.12);color:var(--amber);animation:pulse 1.2s infinite}
-.phone-link{color:var(--cyan);text-decoration:none;display:inline-block;margin-right:6px;transition:color .15s}
+.phone-link{color:var(--cyan);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-right:8px;margin-bottom:3px;transition:color .15s}
 .phone-link:hover{color:#fff;text-decoration:underline}
+.phone-label{font-size:.65rem;padding:1px 5px;border-radius:4px;font-weight:600;vertical-align:middle}
+.phone-label.mobile{background:rgba(16,185,129,.15);color:#10b981}
+.phone-label.landline{background:rgba(59,130,246,.15);color:#3b82f6}
+.phone-label.tollfree{background:rgba(245,158,11,.15);color:#f59e0b}
 .source-link{color:var(--muted);text-decoration:none;font-size:.8rem}
 .source-link:hover{color:var(--accent)}
 
@@ -534,7 +538,12 @@ function renderTable(){
 }
 function buildRow(r){
   const tr=document.createElement('tr');tr.id='row-'+r.row;
-  const phones=(r.phones||[]).map(p=>'<a class="phone-link" href="tel:'+esc(p.number)+'">'+esc(p.number)+'</a>').join('')||'<span style="color:var(--dim)">—</span>';
+  const phones=(r.phones||[]).map(p=>{
+    const num=p.number||'';
+    const label=labelPhone(num);
+    const labelHtml=label?'<span class="phone-label '+label.toLowerCase().replace('-','')+'">' +label+'</span>':'';
+    return '<a class="phone-link" href="tel:'+esc(num)+'">'+esc(num)+' '+labelHtml+'</a>';
+  }).join('')||'<span style="color:var(--dim)">—</span>';
   const sources=[...new Set((r.phones||[]).map(p=>p.source_name).filter(Boolean))];
   const sourceUrl=(r.phones||[]).find(p=>p.source_url)?.source_url||'';
   const sourceHtml=sourceUrl?'<a class="source-link" href="'+esc(sourceUrl)+'" target="_blank" title="'+esc(sourceUrl)+'">'+esc(sources.join(', ')||'—')+'</a>':'<span style="color:var(--dim)">'+esc(sources.join(', ')||'—')+'</span>';
@@ -559,6 +568,17 @@ $('btnExport').addEventListener('click',()=>{window.location.href='/api/export'}
 
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
 function formatDur(s){if(s<60)return Math.round(s)+'s';return Math.floor(s/60)+'m '+Math.round(s%60)+'s'}
+function labelPhone(num){
+  let d=(num||'').replace(/[^0-9]/g,'');
+  if(d.startsWith('216'))d=d.slice(3);
+  if(d.startsWith('00216'))d=d.slice(5);
+  if(d.length<8)return '';
+  const f=d[0];
+  if('2345 9'.includes(f))return 'Mobile';
+  if(f==='7')return 'Landline';
+  if(f==='8')return 'Toll-free';
+  return '';
+}
 </script>
 </body>
 </html>

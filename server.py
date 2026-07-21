@@ -193,12 +193,71 @@ async def handle_export(request):
         return web.Response(status=400, text='No file uploaded')
 
     out_path = os.path.join(DATA_DIR, 'results.xlsx')
-    results_list = list(state['results'].values())
-    write_xlsx(state['filepath'], out_path, results_list)
+
+    # Transform results to format expected by write_xlsx
+    export_list = []
+    for res in state['results'].values():
+        phones_list = res.get('phones', [])
+        # Build labeled phone strings
+        labeled = []
+        for p in phones_list:
+            num = p.get('number', '').strip()
+            label = _label_phone(num)
+            labeled.append(f"{num} ({label})" if label else num)
+
+        sources = list(set(p.get('source_name', '') for p in phones_list if p.get('source_name')))
+        source_urls = [p.get('source_url', '') for p in phones_list if p.get('source_url')]
+
+        export_list.append({
+            'row_num': res.get('row'),
+            'phones': ' | '.join(labeled) if labeled else '',
+            'source': ', '.join(sources) + (' — ' + source_urls[0] if source_urls else ''),
+            'status': res.get('status', ''),
+        })
+
+    try:
+        write_xlsx(state['filepath'], out_path, export_list)
+    except Exception as e:
+        log.error(f"Export error: {e}")
+        return web.Response(status=500, text=f'Export failed: {e}')
+
     return web.FileResponse(
         out_path,
-        headers={'Content-Disposition': 'attachment; filename="B2B_Phone_Results.xlsx"'},
+        headers={
+            'Content-Disposition': 'attachment; filename="HanaSolution_Results.xlsx"',
+        },
     )
+
+
+def _label_phone(num):
+    """Label a Tunisian phone number by type."""
+    # Strip everything except digits
+    digits = ''.join(c for c in num if c.isdigit())
+    # Remove country code
+    if digits.startswith('216'):
+        digits = digits[3:]
+    if digits.startswith('00216'):
+        digits = digits[5:]
+
+    if len(digits) < 8:
+        return ''
+
+    first = digits[0]
+    first2 = digits[:2] if len(digits) >= 2 else ''
+
+    # Tunisian number patterns
+    if first in ('2', '5', '4', '9'):
+        return 'Mobile'
+    elif first == '3':
+        return 'Mobile'
+    elif first2 in ('70', '71', '72', '73', '74', '75', '76', '77', '78', '79'):
+        return 'Landline'
+    elif first == '8':
+        return 'Toll-free'
+    elif first == '7':
+        return 'Landline'
+    else:
+        return ''
 
 
 # ── Background scraper task ──────────────────────────────────
