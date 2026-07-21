@@ -1,0 +1,11 @@
+# .gitignore
+data/
+__pycache__/
+*.pyc
+*.log
+progress.json
+results.csv
+phone_finder.log
+test_*.py
+analyze_results.py
+phone_finder.py
