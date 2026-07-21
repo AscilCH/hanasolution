@@ -81,24 +81,36 @@ def read_xlsx(filepath):
     if not parsed_rows:
         return []
 
-    # Detect header row - assume it's the first non-empty row
-    header_row_idx = 0
+    # Get all columns that have data
+    all_cols = set()
+    for _, rdata in parsed_rows:
+        all_cols.update(rdata.keys())
+    all_cols = sorted(list(all_cols))
+
+    # Assume the first non-empty row might be a header to capture header text,
+    # but DO NOT discard it. We will include it in the results so server.py can decide.
     header_mapping = {}
     for i, (row_num, rdata) in enumerate(parsed_rows):
         if any(rdata.values()):
-            header_row_idx = i
             header_mapping = {col: str(val).strip() for col, val in rdata.items() if str(val).strip()}
             break
 
     result = []
-    for row_num, rdata in parsed_rows[header_row_idx+1:]:
+    for row_num, rdata in parsed_rows:
         if not any(rdata.values()):
             continue
         entry = {'_row_num': row_num}
+        # Add values by column index (col_0, col_1)
+        for col_idx in all_cols:
+            entry[f'col_{col_idx}'] = rdata.get(col_idx, "")
+            
+        # Also map by header text if we found one
         for col_idx, col_name in header_mapping.items():
-            entry[col_name] = rdata.get(col_idx, "")
+            if col_name:
+                entry[col_name] = rdata.get(col_idx, "")
+                
         result.append(entry)
-
+    
     return result
 
 def write_xlsx(input_path, output_path, results_list):

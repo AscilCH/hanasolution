@@ -109,9 +109,27 @@ async def handle_upload(request):
         phone = _detect_col(row, PHONE_COLS)
         cat = _detect_col(row, CATEGORY_COLS)
 
+        # Generalize: if no known name column was found, pick the first text column
+        if not name:
+            # We look at col_0, col_1, etc.
+            for i in range(20):
+                k = f"col_{i}"
+                if k in row:
+                    sv = str(row[k]).strip()
+                    # Skip if it's a pure number or matches phone/category
+                    if sv and not sv.isdigit() and sv not in (phone, cat):
+                        name = sv
+                        break
+
         if not name:
             stats['empty_skipped'] += 1
             continue
+
+        # Skip the header row itself (where the value IS the header name)
+        if row['_row_num'] <= 2:
+            is_header = any(name.lower() == c.lower() for c in NAME_COLS)
+            if is_header:
+                continue
 
         comp = {
             'row': row['_row_num'],
