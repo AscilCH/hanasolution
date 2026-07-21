@@ -116,8 +116,9 @@ async def handle_upload(request):
                 k = f"col_{i}"
                 if k in row:
                     sv = str(row[k]).strip()
-                    # Skip if it's a pure number or matches phone/category
-                    if sv and not sv.isdigit() and sv not in (phone, cat):
+                    # Skip if it's a pure number (including floats) or matches phone/category
+                    is_num = sv.replace('.', '', 1).isdigit()
+                    if sv and not is_num and sv not in (phone, cat):
                         name = sv
                         break
 
