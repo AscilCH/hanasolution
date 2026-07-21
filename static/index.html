@@ -546,7 +546,18 @@ function buildRow(r){
   }).join('')||'<span style="color:var(--dim)">—</span>';
   const sources=[...new Set((r.phones||[]).map(p=>p.source_name).filter(Boolean))];
   const sourceUrl=(r.phones||[]).find(p=>p.source_url)?.source_url||'';
-  const sourceHtml=sourceUrl?'<a class="source-link" href="'+esc(sourceUrl)+'" target="_blank" title="'+esc(sourceUrl)+'">'+esc(sources.join(', ')||'—')+'</a>':'<span style="color:var(--dim)">'+esc(sources.join(', ')||'—')+'</span>';
+  let sourceHtml='<span style="color:var(--dim)">—</span>';
+  if(sources.length){
+    const viaBadge=sources[0];
+    const parts=viaBadge.split(' → ');
+    const method=parts.length>1?parts[0]:'';
+    const domain=parts.length>1?parts[1]:parts[0];
+    const methodColors={DuckDuckGo:'#de5833',Google:'#4285f4',Direct:'#10b981','PagesJaunes.tn':'#f59e0b','Ween.tn':'#8b5cf6',Facebook:'#1877f2'};
+    const mc=methodColors[method]||'var(--muted)';
+    const methodBadge=method?'<span style="font-size:.65rem;padding:1px 6px;border-radius:4px;background:'+mc+'22;color:'+mc+';font-weight:600">'+esc(method)+'</span> ':'';
+    const urlLink=sourceUrl?'<a class="source-link" href="'+esc(sourceUrl)+'" target="_blank" title="'+esc(sourceUrl)+'" style="display:block;margin-top:2px;font-size:.75rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(domain||sourceUrl)+'</a>':'';
+    sourceHtml=methodBadge+urlLink;
+  }
   tr.innerHTML='<td>'+r.row+'</td><td dir="auto">'+esc(r.name)+'</td><td dir="auto">'+esc(r.category)+'</td><td>'+statusBadge(r.status)+'</td><td>'+phones+'</td><td>'+sourceHtml+'</td>';
   return tr;
 }

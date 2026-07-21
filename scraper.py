@@ -228,7 +228,7 @@ class PhoneScraper:
         except Exception:
             return False
 
-    async def _scrape_url(self, url: str) -> tuple[list[dict], list[str]]:
+    async def _scrape_url(self, url: str, via: str = '') -> tuple[list[dict], list[str]]:
         """Scrape a page → (phone_results, contact_page_links)."""
         html = await self._get(url)
         if not html:
@@ -237,7 +237,9 @@ class PhoneScraper:
         phones = extract_phones(text)
         raw = extract_phones(html)
         all_nums = sorted(set(phones + raw))
-        results = [{'number': n, 'source_url': url, 'source_name': urllib.parse.urlparse(url).netloc}
+        domain = urllib.parse.urlparse(url).netloc
+        label = f"{via} → {domain}" if via else domain
+        results = [{'number': n, 'source_url': url, 'source_name': label}
                     for n in all_nums]
         contacts = _find_contact_links(html, url)
         return results, contacts
@@ -278,10 +280,10 @@ class PhoneScraper:
                         'https://www.{}.tn', 'https://{}.tn']:
                 url = tpl.format(a)
                 if await self._head_ok(url):
-                    results, contacts = await self._scrape_url(url)
+                    results, contacts = await self._scrape_url(url, via='Direct')
                     for cl in contacts[:3]:
                         await asyncio.sleep(0.4)
-                        more, _ = await self._scrape_url(cl)
+                        more, _ = await self._scrape_url(cl, via='Direct')
                         results += more
                     if results:
                         return results
@@ -313,10 +315,10 @@ class PhoneScraper:
                 if _is_skip(surl):
                     continue
                 await asyncio.sleep(self.SCRAPE_DELAY)
-                results, contacts = await self._scrape_url(surl)
+                results, contacts = await self._scrape_url(surl, via='DuckDuckGo')
                 for cl in contacts[:2]:
                     await asyncio.sleep(0.4)
-                    more, _ = await self._scrape_url(cl)
+                    more, _ = await self._scrape_url(cl, via='DuckDuckGo')
                     results += more
                 if results:
                     return results
@@ -390,7 +392,7 @@ class PhoneScraper:
                         if _is_skip(ru) or 'google' in ru:
                             continue
                         await asyncio.sleep(self.SCRAPE_DELAY)
-                        results, contacts = await self._scrape_url(ru)
+                        results, contacts = await self._scrape_url(ru, via='Google')
                         if results:
                             return results
             except Exception:
