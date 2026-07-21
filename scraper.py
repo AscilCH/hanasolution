@@ -292,16 +292,24 @@ class PhoneScraper:
         queries = []
         eng = parsed['english']
         clean = parsed['clean']
-        if eng:
-            queries.append(f'{eng} site:.tn contact téléphone')
-            queries.append(f'{eng} Tunisie téléphone contact')
-        queries.append(f'{clean} تونس هاتف')
-        queries.append(f'{clean} contact téléphone site:.tn')
+        abbs = parsed['abbreviations']
 
-        for q in queries[:3]:
+        # More targeted queries
+        if eng:
+            queries.append(f'"{eng}" numéro téléphone Tunisia')
+            queries.append(f'{eng} contact téléphone site:.tn')
+            queries.append(f'{eng} Tunisia phone number')
+        if abbs:
+            for ab in abbs[:2]:
+                queries.append(f'{ab} Tunisie téléphone contact')
+        if clean:
+            queries.append(f'{clean} هاتف تونس')
+            queries.append(f'{clean} contact téléphone')
+
+        for q in queries[:4]:
             await asyncio.sleep(self.SEARCH_DELAY)
             urls = await self._search_ddg(q)
-            for surl in urls[:3]:
+            for surl in urls[:4]:
                 if _is_skip(surl):
                     continue
                 await asyncio.sleep(self.SCRAPE_DELAY)
@@ -344,6 +352,51 @@ class PhoneScraper:
                 return [{'number': n, 'source_url': url, 'source_name': 'Ween.tn'} for n in phones]
         return []
 
+    async def _source_google(self, parsed: dict) -> list[dict]:
+        """Search Google for phone numbers (snippets often contain them)."""
+        eng = parsed['english']
+        clean = parsed['clean']
+        abbs = parsed['abbreviations']
+
+        # Build a targeted query
+        keyword = eng or clean
+        if abbs:
+            keyword = abbs[0] + ' ' + keyword
+
+        queries = [
+            f'{keyword} Tunisia phone number contact',
+            f'{keyword} Tunisie numéro téléphone',
+        ]
+
+        for q in queries[:2]:
+            await asyncio.sleep(self.SEARCH_DELAY)
+            try:
+                encoded = urllib.parse.quote(q)
+                url = f'https://www.google.com/search?q={encoded}&hl=fr&gl=tn'
+                html = await self._get(url)
+                if html:
+                    # Extract phones from Google snippet
+                    text = clean_html(html)
+                    phones = extract_phones(text)
+                    if phones:
+                        return [{'number': n, 'source_url': url, 'source_name': 'Google'}
+                                for n in phones]
+                    # Also follow result links
+                    result_urls = re.findall(r'href="/url\?q=(https?://[^&"]+)', html)
+                    if not result_urls:
+                        result_urls = re.findall(r'href="(https?://[^"]+)"', html)
+                    for ru in result_urls[:3]:
+                        ru = urllib.parse.unquote(ru)
+                        if _is_skip(ru) or 'google' in ru:
+                            continue
+                        await asyncio.sleep(self.SCRAPE_DELAY)
+                        results, contacts = await self._scrape_url(ru)
+                        if results:
+                            return results
+            except Exception:
+                continue
+        return []
+
     async def _source_facebook_ddg(self, parsed: dict) -> list[dict]:
         """Search DDG for Facebook pages, follow them, extract phones."""
         keyword = parsed['english'] or parsed['clean']
@@ -372,6 +425,7 @@ class PhoneScraper:
             self._source_ddg,
             self._source_pagesjaunes,
             self._source_ween,
+            self._source_google,
             self._source_facebook_ddg,
         ]:
             try:
@@ -389,3 +443,4 @@ class PhoneScraper:
                 continue
 
         return []
+
