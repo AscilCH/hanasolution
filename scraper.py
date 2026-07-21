@@ -255,10 +255,18 @@ class PhoneScraper:
         html = await self._get(url)
         if not html:
             return [], []
+            
+        # Extract phones from clean text
         text = clean_html(html)
         phones = extract_phones(text)
-        raw = extract_phones(html)
-        all_nums = sorted(set(phones + raw))
+        
+        # Explicitly extract tel: links from raw HTML just in case they aren't in the text
+        tel_links = re.findall(r'href=["\']tel:([^"\']+)["\']', html, re.I)
+        for t in tel_links:
+            phones.extend(extract_phones(t))
+            
+        all_nums = sorted(set(phones))
+        
         domain = urllib.parse.urlparse(url).netloc
         label = f"{via} → {domain}" if via else domain
         results = [{'number': n, 'source_url': url, 'source_name': label}
