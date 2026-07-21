@@ -77,6 +77,11 @@ def extract_phones(text: str) -> list[str]:
     """Extract valid 8-digit Tunisian phone numbers. Returns formatted strings with country code if present."""
     if not text:
         return []
+        
+    # Strip out URLs so we don't accidentally extract 8-digit IDs from links
+    text = re.sub(r'https?://\S+', '', text, flags=re.I)
+    text = re.sub(r'www\.\S+', '', text, flags=re.I)
+    
     phones = set()
     for pat in PHONE_PATTERNS:
         for m in pat.finditer(text):

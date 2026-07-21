@@ -553,7 +553,19 @@ function buildRow(r){
       const methodColors={DuckDuckGo:'#de5833',Google:'#4285f4',Direct:'#10b981','PagesJaunes.tn':'#f59e0b','Ween.tn':'#8b5cf6',Facebook:'#1877f2'};
       const mc=methodColors[method]||'var(--muted)';
       const methodBadge=method?'<span style="font-size:.65rem;padding:1px 6px;border-radius:4px;background:'+mc+'22;color:'+mc+';font-weight:600">'+esc(method)+'</span> ':'';
-      const urlLink=sourceUrl?'<a class="source-link" href="'+esc(sourceUrl)+'" target="_blank" title="'+esc(sourceUrl)+'" style="font-size:.75rem;">'+esc(domain||sourceUrl)+'</a>':'';
+      
+      let linkHref = sourceUrl;
+      if (sourceUrl && p.number) {
+          // Append text fragment to scroll directly to the phone number (with and without spaces)
+          const numWithSpaces = encodeURIComponent(p.number);
+          const numNoSpaces = encodeURIComponent(p.number.replace(/\s+/g, ''));
+          const fragment = '#:~:text=' + numWithSpaces + '&text=' + numNoSpaces;
+          if (!linkHref.includes('#:~:text=')) {
+              linkHref += (linkHref.includes('#') ? '' : fragment);
+          }
+      }
+      
+      const urlLink=sourceUrl?'<a class="source-link" href="'+esc(linkHref)+'" target="_blank" title="'+esc(sourceUrl)+'" style="font-size:.75rem;">'+esc(domain||sourceUrl)+'</a>':'';
       sourceHtml='<div style="margin-top:2px;margin-bottom:8px;">'+methodBadge+urlLink+'</div>';
     }
     return '<div>'+phoneLink+sourceHtml+'</div>';
