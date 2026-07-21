@@ -65,35 +65,52 @@ def parse_company_name(name: str) -> dict:
 
 # ── Phone extraction ────────────────────────────────────────
 PHONE_PATTERNS = [
-    re.compile(r'(?:\+216|00216|\(216\))[\s./-]*(\d{2})[\s./-]*(\d{3})[\s./-]*(\d{3})'),
+    # International prefix patterns: +216, 00216, (216), +33, etc.
+    re.compile(r'(\+\d{1,3}|00\d{1,3}|\(\d{1,3}\))[\s./-]*(\d{2})[\s./-]*(\d{3})[\s./-]*(\d{3})'),
+    # 8-digit with separators (no prefix)
     re.compile(r'(?<!\d)([2-9]\d)[\s./-](\d{3})[\s./-](\d{3})(?!\d)'),
+    # 8-digit continuous (no prefix)
     re.compile(r'(?<!\d)([2-9]\d)(\d{3})(\d{3})(?!\d)'),
 ]
 
 def extract_phones(text: str) -> list[str]:
-    """Extract valid 8-digit Tunisian phone numbers. Returns formatted strings."""
+    """Extract valid 8-digit Tunisian phone numbers. Returns formatted strings with country code if present."""
     if not text:
         return []
     phones = set()
     for pat in PHONE_PATTERNS:
         for m in pat.finditer(text):
-            a, b, c = m.groups()
+            groups = m.groups()
+            # 4 groups = has prefix, 3 groups = no prefix
+            if len(groups) == 4:
+                prefix, a, b, c = groups
+                # Normalize prefix
+                prefix = prefix.strip('()')
+                if prefix.startswith('00'):
+                    prefix = '+' + prefix[2:]
+                elif not prefix.startswith('+'):
+                    prefix = '+' + prefix
+                has_prefix = True
+            else:
+                a, b, c = groups
+                prefix = ''
+                has_prefix = False
+
             full = a + b + c  # 8 raw digits
             if a[0] not in '23456789':
                 continue
-            # Filter out dates: YYYYMMDD or DDMMYYYY patterns
+            # Filter out dates
             if _looks_like_date(full):
                 continue
-            # Filter out sequential / repeated digit patterns
+            # Filter out junk numbers
             if _is_junk_number(full):
                 continue
-            # For bare 8-digit patterns (no +216 prefix), check nearby context
-            matched_text = m.group(0)
-            if not any(x in matched_text for x in ['+216', '00216', '(216)']):
+            # For bare 8-digit patterns (no prefix), check nearby context
+            if not has_prefix:
+                matched_text = m.group(0)
                 start = max(0, m.start() - 80)
                 end = min(len(text), m.end() + 40)
                 context = text[start:end].lower()
-                # If near a date word, skip
                 date_words = ['janvier','février','mars','avril','mai','juin','juillet',
                     'août','septembre','octobre','novembre','décembre',
                     'january','february','march','april','may','june','july',
@@ -103,7 +120,12 @@ def extract_phones(text: str) -> list[str]:
                     'date','publi']
                 if any(dw in context for dw in date_words):
                     continue
-            phones.add(f"{a} {b} {c}")
+
+            # Format output with prefix if found
+            formatted = f"{a} {b} {c}"
+            if has_prefix:
+                formatted = f"{prefix} {formatted}"
+            phones.add(formatted)
     return sorted(phones)
 
 

@@ -266,8 +266,7 @@ td[dir="auto"]{max-width:260px;overflow:hidden;text-overflow:ellipsis}
           <th data-col="name">Company Name <span class="sort-icon">⇅</span></th>
           <th data-col="category">Category <span class="sort-icon">⇅</span></th>
           <th data-col="status">Status <span class="sort-icon">⇅</span></th>
-          <th>Phone Number(s)</th>
-          <th>Source</th>
+          <th colspan="2">Phone Numbers & Sources</th>
         </tr></thead>
         <tbody id="tableBody"></tbody>
       </table>
@@ -538,27 +537,29 @@ function renderTable(){
 }
 function buildRow(r){
   const tr=document.createElement('tr');tr.id='row-'+r.row;
-  const phones=(r.phones||[]).map(p=>{
+  const phonesHtml=(r.phones||[]).map(p=>{
     const num=p.number||'';
     const label=labelPhone(num);
     const labelHtml=label?'<span class="phone-label '+label.toLowerCase().replace('-','')+'">' +label+'</span>':'';
-    return '<a class="phone-link" href="tel:'+esc(num)+'">'+esc(num)+' '+labelHtml+'</a>';
+    const phoneLink='<a class="phone-link" href="tel:'+esc(num)+'">'+esc(num)+' '+labelHtml+'</a>';
+
+    const sourceName=p.source_name||'';
+    const sourceUrl=p.source_url||'';
+    let sourceHtml='';
+    if(sourceName){
+      const parts=sourceName.split(' → ');
+      const method=parts.length>1?parts[0]:'';
+      const domain=parts.length>1?parts[1]:parts[0];
+      const methodColors={DuckDuckGo:'#de5833',Google:'#4285f4',Direct:'#10b981','PagesJaunes.tn':'#f59e0b','Ween.tn':'#8b5cf6',Facebook:'#1877f2'};
+      const mc=methodColors[method]||'var(--muted)';
+      const methodBadge=method?'<span style="font-size:.65rem;padding:1px 6px;border-radius:4px;background:'+mc+'22;color:'+mc+';font-weight:600">'+esc(method)+'</span> ':'';
+      const urlLink=sourceUrl?'<a class="source-link" href="'+esc(sourceUrl)+'" target="_blank" title="'+esc(sourceUrl)+'" style="font-size:.75rem;">'+esc(domain||sourceUrl)+'</a>':'';
+      sourceHtml='<div style="margin-top:2px;margin-bottom:8px;">'+methodBadge+urlLink+'</div>';
+    }
+    return '<div>'+phoneLink+sourceHtml+'</div>';
   }).join('')||'<span style="color:var(--dim)">—</span>';
-  const sources=[...new Set((r.phones||[]).map(p=>p.source_name).filter(Boolean))];
-  const sourceUrl=(r.phones||[]).find(p=>p.source_url)?.source_url||'';
-  let sourceHtml='<span style="color:var(--dim)">—</span>';
-  if(sources.length){
-    const viaBadge=sources[0];
-    const parts=viaBadge.split(' → ');
-    const method=parts.length>1?parts[0]:'';
-    const domain=parts.length>1?parts[1]:parts[0];
-    const methodColors={DuckDuckGo:'#de5833',Google:'#4285f4',Direct:'#10b981','PagesJaunes.tn':'#f59e0b','Ween.tn':'#8b5cf6',Facebook:'#1877f2'};
-    const mc=methodColors[method]||'var(--muted)';
-    const methodBadge=method?'<span style="font-size:.65rem;padding:1px 6px;border-radius:4px;background:'+mc+'22;color:'+mc+';font-weight:600">'+esc(method)+'</span> ':'';
-    const urlLink=sourceUrl?'<a class="source-link" href="'+esc(sourceUrl)+'" target="_blank" title="'+esc(sourceUrl)+'" style="display:block;margin-top:2px;font-size:.75rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(domain||sourceUrl)+'</a>':'';
-    sourceHtml=methodBadge+urlLink;
-  }
-  tr.innerHTML='<td>'+r.row+'</td><td dir="auto">'+esc(r.name)+'</td><td dir="auto">'+esc(r.category)+'</td><td>'+statusBadge(r.status)+'</td><td>'+phones+'</td><td>'+sourceHtml+'</td>';
+
+  tr.innerHTML='<td>'+r.row+'</td><td dir="auto">'+esc(r.name)+'</td><td dir="auto">'+esc(r.category)+'</td><td>'+statusBadge(r.status)+'</td><td colspan="2">'+phonesHtml+'</td>';
   return tr;
 }
 function updateTableRow(rn){

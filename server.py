@@ -199,19 +199,30 @@ async def handle_export(request):
     for res in state['results'].values():
         phones_list = res.get('phones', [])
         # Build labeled phone strings
+        # Build labeled phone strings with their sources
         labeled = []
+        source_texts = []
         for p in phones_list:
             num = p.get('number', '').strip()
             label = _label_phone(num)
-            labeled.append(f"{num} ({label})" if label else num)
-
-        sources = list(set(p.get('source_name', '') for p in phones_list if p.get('source_name')))
-        source_urls = [p.get('source_url', '') for p in phones_list if p.get('source_url')]
+            
+            src_name = p.get('source_name', '')
+            src_url = p.get('source_url', '')
+            # Extract just the search engine name if it has ' -> ' format
+            engine = src_name.split(' → ')[0] if ' → ' in src_name else src_name
+            
+            phone_text = f"{num} ({label})" if label else num
+            if engine:
+                phone_text += f" [{engine}]"
+            labeled.append(phone_text)
+            
+            if src_url and src_url not in source_texts:
+                source_texts.append(src_url)
 
         export_list.append({
             'row_num': res.get('row'),
             'phones': ' | '.join(labeled) if labeled else '',
-            'source': ', '.join(sources) + (' — ' + source_urls[0] if source_urls else ''),
+            'source': '\n'.join(source_texts) if source_texts else '',
             'status': res.get('status', ''),
         })
 
