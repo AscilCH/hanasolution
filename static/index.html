@@ -84,8 +84,18 @@ body{
 .btn-export{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.2)}
 .btn-export:hover{background:rgba(16,185,129,.22)}
 .btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
-.btn-game{background:rgba(139,92,246,.12);color:#a78bfa;border:1px solid rgba(139,92,246,.2);font-size:.82rem;padding:7px 16px}
-.btn-game:hover{background:rgba(139,92,246,.22)}
+/* ── Game Banner ─────────────────────────────────────────── */
+.game-banner{
+  margin-top:16px;padding:14px 20px;border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(6,182,212,.12));
+  border:1px solid rgba(139,92,246,.15);display:none;
+  text-align:center;cursor:pointer;transition:all .3s;
+  animation:fadeUp .5s ease,gamePulse 3s ease-in-out infinite;
+}
+.game-banner:hover{background:linear-gradient(135deg,rgba(139,92,246,.22),rgba(6,182,212,.22));transform:scale(1.01)}
+.game-banner .game-cta{font-size:1rem;font-weight:600;color:#a78bfa}
+.game-banner .game-sub{font-size:.8rem;color:var(--muted);margin-top:2px}
+@keyframes gamePulse{0%,100%{border-color:rgba(139,92,246,.15)}50%{border-color:rgba(139,92,246,.35)}}
 
 /* ── Dashboard ──────────────────────────────────────────── */
 #dashboard{display:none}
@@ -204,10 +214,7 @@ td[dir="auto"]{max-width:260px;overflow:hidden;text-overflow:ellipsis}
   <section class="card" id="dashboard">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h2 style="margin:0">Processing Status</h2>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-game" id="btnGame">🎮 Play Snake</button>
-        <button class="btn btn-danger" id="btnStop">⏹ Stop</button>
-      </div>
+      <button class="btn btn-danger" id="btnStop">⏹ Stop</button>
     </div>
     <div class="progress-wrap">
       <div class="progress-bar" id="progressBar" style="width:0%"></div>
@@ -221,6 +228,10 @@ td[dir="auto"]{max-width:260px;overflow:hidden;text-overflow:ellipsis}
     </div>
     <div class="current-log" id="currentLog"><span class="dot"></span> <span id="logText">Waiting to start...</span></div>
     <div class="fun-msg" id="funMsg"></div>
+    <div class="game-banner" id="gameBanner" onclick="toggleGame()">
+      <div class="game-cta">🎮 Bored? Play Snake while you wait! 🐍</div>
+      <div class="game-sub">Click here to play — use arrow keys or buttons</div>
+    </div>
     <div id="gameSection">
       <div class="game-wrap">
         <h3>🐍 Snake — Kill time while we search!</h3>
@@ -366,11 +377,11 @@ let snakeDir='right',snakeRunning=false,snakeTimer=null,snakeScore=0,snakeBest=0
 const CELL=15,COLS=20,ROWS=20;
 let snake=[{x:5,y:10},{x:4,y:10},{x:3,y:10}],food={x:12,y:10};
 
-document.getElementById('btnGame').addEventListener('click',()=>{
+function toggleGame(){
   const gs=document.getElementById('gameSection');
   gs.style.display=gs.style.display==='none'?'block':'none';
   if(!snakeRunning)startSnake();
-});
+}
 
 document.addEventListener('keydown',e=>{
   const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
@@ -469,6 +480,7 @@ async function startProcessing(){
   if(d.status==='already_running'){alert('Already running!');return}
   processing=true;stats={total:toProcess,found:0,notfound:0,processed:0};
   $('dashboard').style.display='block';$('btnStart').disabled=true;$('doneBanner').style.display='none';
+  $('gameBanner').style.display='block';
   $('statTotal').textContent=toProcess;updateStats();
   funInterval=setInterval(showFunMsg,5000);showFunMsg();
   eventSource=new EventSource('/api/progress');
