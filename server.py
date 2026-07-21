@@ -295,7 +295,7 @@ if __name__ == '__main__':
     print()
     print("  ╔══════════════════════════════════════╗")
     print("  ║     HanaSolution — Server            ║")
-    print(f"  ║     http://localhost:{port:<17s}  ║")
+    print(f"  ║     http://localhost:{str(port):<17}  ║")
     print("  ╚══════════════════════════════════════╝")
     print()
     # Only open browser when running locally
